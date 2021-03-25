@@ -40,6 +40,7 @@ class ParallelLinear(torch.nn.Module):
 
         # Matrix multiply
         output_parallel = F.linear(input_parallel, self.weight, self.bias)
+        output_parallel = F.relu(output_parallel)
         output_gathered = GatherFromModelParallelRegion.apply(output_parallel)
 
         return output_gathered
