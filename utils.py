@@ -6,6 +6,11 @@ def divide(numerator, denominator):
     assert numerator % denominator == 0, f'{numerator} is not divisible by {denominator}'
     return numerator // denominator
 
+def vocab_range_from_per_partition_vocab_size(per_partition_vocab_size, rank):
+    index_f = rank * per_partition_vocab_size
+    index_l = index_f + per_partition_vocab_size
+    return index_f, index_l
+
 
 def print_rank_0(msg: str):
     args = get_args()

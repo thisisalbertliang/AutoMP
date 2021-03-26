@@ -6,10 +6,11 @@ from mappings import CopyToModelParallelRegion, GatherFromModelParallelRegion
 
 
 class ParallelLinear(torch.nn.Module):
-    def __init__(self, input_size: int, output_size: int):
+    def __init__(self, input_size: int, output_size: int, gather: bool = True):
         super(ParallelLinear, self).__init__()
         self.input_size = input_size
         self.output_size = output_size
+        self.gather = gather
 
         world_size = torch.distributed.get_world_size()
         assert output_size % world_size == 0, \
@@ -36,12 +37,20 @@ class ParallelLinear(torch.nn.Module):
 
     def forward(self, input_):
         # Set up backprop all-reduce
+        # print('HERE00', input_.shape)
         input_parallel = CopyToModelParallelRegion.apply(input_)
+        # print('HERE11', input_parallel.shape)
 
         # Matrix multiply
         output_parallel = F.linear(input_parallel, self.weight, self.bias)
         output_parallel = F.relu(output_parallel)
+
+        if not self.gather:
+            return output_parallel
+
+        # print('HERE0', output_parallel.shape)
         output_gathered = GatherFromModelParallelRegion.apply(output_parallel)
+        # print('HERE1', output_gathered.shape)
 
         return output_gathered
 
