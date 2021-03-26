@@ -18,15 +18,8 @@ class _VocabParallelCrossEntropy(torch.autograd.Function):
         # print('indices:',vocab_start_index, vocab_end_index)
 
         # Create a mask of valid vocab ids (1 means it needs to be masked).
-        # target_mask = (target < vocab_start_index) | (target >= vocab_end_index)
-        # masked_target = target.clone() - vocab_start_index
-        # masked_target[target_mask] = 0
-
-        target_mask = torch.ones_like(target)
-        target_mask[:vocab_start_index] = 0
-        target_mask[vocab_end_index:] = 0
-
-        masked_target = target.clone()
+        target_mask = (target < vocab_start_index) | (target >= vocab_end_index)
+        masked_target = target.clone() - vocab_start_index
         masked_target[target_mask] = 0
 
         # Get predicted-logits = logits[target].
@@ -42,8 +35,6 @@ class _VocabParallelCrossEntropy(torch.autograd.Function):
         predicted_logits_1d = predicted_logits_1d.clone().contiguous()
         predicted_logits = predicted_logits_1d.view_as(target)
         predicted_logits[target_mask] = 0.0
-        # predicted_logits[:vocab_start_index] = 0.0
-        # predicted_logits[vocab_end_index:] = 0.0
         # All reduce is needed to get the chunks from other GPUs.
         torch.distributed.all_reduce(predicted_logits,
                                      op=torch.distributed.ReduceOp.SUM)
