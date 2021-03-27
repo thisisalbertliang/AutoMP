@@ -24,7 +24,7 @@ class ParallelLinear(torch.nn.Module):
             device=torch.cuda.current_device(),
             dtype=torch.float
         ))
-        torch.nn.init.xavier_normal(self.weight)
+        torch.nn.init.xavier_normal_(self.weight)
 
         self.bias = Parameter(torch.empty(
             self.output_size_per_partition,
