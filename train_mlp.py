@@ -10,7 +10,7 @@ from model.cross_entropy import parallel_cross_entropy
 from model.mlp import ParallelMLP
 
 
-def train():
+def train(hidden_sizes):
     # Parse command line arguments
     parse_args()
     # Initialize torch.distributed
@@ -27,17 +27,21 @@ def train():
     num_features = train_X.size()[1]
     num_classes = 10
     assert num_features == 28*28
-    mlp = ParallelMLP(num_features=num_features, num_classes=num_classes)
+    mlp = ParallelMLP(num_features=num_features, num_classes=num_classes, hidden_sizes=hidden_sizes)
     print_rank_0('AutoMP: Successfully initialized ParallelMLP')
 
     criterion = torch.nn.CrossEntropyLoss()
-    optimizer = torch.optim.SGD(mlp.parameters(), lr=0.001)
+    optimizer = torch.optim.SGD(mlp.parameters(), lr=0.01)
 
     num_epochs = 500
     num_train_samples = train_X.size()[0]
     batch_size = num_train_samples
+    prev_time = time.time()
     for epoch in range(num_epochs):
-        start_time = time.time()
+        if epoch > 0:
+            print_rank_0(f' Elapsed time: {time.time()-prev_time}')
+            prev_time = time.time()
+        # start_time = time.time()
         train_loss = 0
         for sample_idx in range(0, num_train_samples, batch_size):
             mini_batch = train_X[sample_idx:sample_idx+batch_size, ...]
@@ -53,8 +57,9 @@ def train():
             loss.backward()
             optimizer.step()
         train_loss /= (num_train_samples / batch_size)
-        end_time = time.time()
-        print_rank_0(f'Epoch Number {epoch}: Elapsed Time: {end_time-start_time}; train loss: {train_loss}')
+        # end_time = time.time()
+        # if epoch % 50 == 0:
+        print_rank_0(f'Epoch Number {epoch}: train loss: {train_loss}')
 
 
 
@@ -72,4 +77,4 @@ def train():
 
 
 if __name__ == '__main__':
-    train()
+    train([20480,20480,20480])
