@@ -73,29 +73,29 @@ def average_elapsed_time_vs_model_size_all():
 
 
 def average_elapsed_time_vs_num_gpus_all():
-    plt.scatter(x=[num_gpu for num_gpu in NUM_GPU_2_AVG_ELAPSED_TIME_PER_EPOCH_MODEL_0.keys()],
-                y=[avg_elapsed_time for avg_elapsed_time in NUM_GPU_2_AVG_ELAPSED_TIME_PER_EPOCH_MODEL_0.values()],
+    plt.scatter(x=NUM_GPU_2_AVG_ELAPSED_TIME_PER_EPOCH_MODEL_0.keys(),
+                y=NUM_GPU_2_AVG_ELAPSED_TIME_PER_EPOCH_MODEL_0.values(),
                 label=f'MLP-{MODEL_SIZES_IN_MILLIONS[0]}M')
-    plt.scatter(x=[num_gpu for num_gpu in NUM_GPU_2_AVG_ELAPSED_TIME_PER_EPOCH_MODEL_1.keys()],
-                y=[avg_elapsed_time for avg_elapsed_time in NUM_GPU_2_AVG_ELAPSED_TIME_PER_EPOCH_MODEL_1.values()],
+    plt.scatter(x=NUM_GPU_2_AVG_ELAPSED_TIME_PER_EPOCH_MODEL_1.keys(),
+                y=NUM_GPU_2_AVG_ELAPSED_TIME_PER_EPOCH_MODEL_1.values(),
                 label=f'MLP-{MODEL_SIZES_IN_MILLIONS[1]}M')
-    plt.scatter(x=[num_gpu for num_gpu in NUM_GPU_2_AVG_ELAPSED_TIME_PER_EPOCH_MODEL_2.keys()],
-                y=[avg_elapsed_time for avg_elapsed_time in NUM_GPU_2_AVG_ELAPSED_TIME_PER_EPOCH_MODEL_2.values()],
+    plt.scatter(x=NUM_GPU_2_AVG_ELAPSED_TIME_PER_EPOCH_MODEL_2.keys(),
+                y=NUM_GPU_2_AVG_ELAPSED_TIME_PER_EPOCH_MODEL_2.values(),
                 label=f'MLP-{MODEL_SIZES_IN_MILLIONS[2]}M')
-    plt.scatter(x=[num_gpu for num_gpu in NUM_GPU_2_AVG_ELAPSED_TIME_PER_EPOCH_MODEL_3.keys()],
-                y=[avg_elapsed_time for avg_elapsed_time in NUM_GPU_2_AVG_ELAPSED_TIME_PER_EPOCH_MODEL_3.values()],
+    plt.scatter(x=NUM_GPU_2_AVG_ELAPSED_TIME_PER_EPOCH_MODEL_3.keys(),
+                y=NUM_GPU_2_AVG_ELAPSED_TIME_PER_EPOCH_MODEL_3.values(),
                 label=f'MLP-{MODEL_SIZES_IN_MILLIONS[3]}M')
-    plt.scatter(x=[num_gpu for num_gpu in NUM_GPU_2_AVG_ELAPSED_TIME_PER_EPOCH_MODEL_4.keys()],
-                y=[avg_elapsed_time for avg_elapsed_time in NUM_GPU_2_AVG_ELAPSED_TIME_PER_EPOCH_MODEL_4.values()],
+    plt.scatter(x=NUM_GPU_2_AVG_ELAPSED_TIME_PER_EPOCH_MODEL_4.keys(),
+                y=NUM_GPU_2_AVG_ELAPSED_TIME_PER_EPOCH_MODEL_4.values(),
                 label=f'MLP-{MODEL_SIZES_IN_MILLIONS[4]}M')
-    plt.scatter(x=[num_gpu for num_gpu in NUM_GPU_2_AVG_ELAPSED_TIME_PER_EPOCH_MODEL_5.keys()],
-                y=[avg_elapsed_time for avg_elapsed_time in NUM_GPU_2_AVG_ELAPSED_TIME_PER_EPOCH_MODEL_5.values()],
+    plt.scatter(x=NUM_GPU_2_AVG_ELAPSED_TIME_PER_EPOCH_MODEL_5.keys(),
+                y=NUM_GPU_2_AVG_ELAPSED_TIME_PER_EPOCH_MODEL_5.values(),
                 label=f'MLP-{MODEL_SIZES_IN_MILLIONS[5]}M')
-    plt.scatter(x=[num_gpu for num_gpu in NUM_GPU_2_AVG_ELAPSED_TIME_PER_EPOCH_MODEL_6.keys()],
-                y=[avg_elapsed_time for avg_elapsed_time in NUM_GPU_2_AVG_ELAPSED_TIME_PER_EPOCH_MODEL_6.values()],
+    plt.scatter(x=NUM_GPU_2_AVG_ELAPSED_TIME_PER_EPOCH_MODEL_6.keys(),
+                y=NUM_GPU_2_AVG_ELAPSED_TIME_PER_EPOCH_MODEL_6.values(),
                 label=f'MLP-{MODEL_SIZES_IN_MILLIONS[6]}M')
-    plt.scatter(x=[num_gpu for num_gpu in NUM_GPU_2_AVG_ELAPSED_TIME_PER_EPOCH_MODEL_7.keys()],
-                y=[avg_elapsed_time for avg_elapsed_time in NUM_GPU_2_AVG_ELAPSED_TIME_PER_EPOCH_MODEL_7.values()],
+    plt.scatter(x=NUM_GPU_2_AVG_ELAPSED_TIME_PER_EPOCH_MODEL_7.keys(),
+                y=NUM_GPU_2_AVG_ELAPSED_TIME_PER_EPOCH_MODEL_7.values(),
                 label=f'MLP-{MODEL_SIZES_IN_MILLIONS[7]}M')
     plt.title(f'Average Elapsed Time per Epoch v.s. Number of GPUs')
     plt.xlabel('Number of GPUs')
