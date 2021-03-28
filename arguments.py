@@ -12,6 +12,10 @@ def parse_args():
                         help='number of model parallel processes')
     # Add future AutoMP arguments here...
 
+    parser.add_argument('--num-epochs', type=int, default=20)
+
+    parser.add_argument('--hidden-sizes', nargs='+', required=True, type=int)
+
     # Parse
     global GLOBAL_ARGS
     GLOBAL_ARGS = parser.parse_args()

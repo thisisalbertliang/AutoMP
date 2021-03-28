@@ -10,9 +10,8 @@ from model.cross_entropy import parallel_cross_entropy
 from model.mlp import ParallelMLP
 
 
-def train(hidden_sizes):
-    # Parse command line arguments
-    parse_args()
+def train(hidden_sizes, num_epochs=50):
+    
     # Initialize torch.distributed
     init_distributed()
 
@@ -33,15 +32,12 @@ def train(hidden_sizes):
     criterion = torch.nn.CrossEntropyLoss()
     optimizer = torch.optim.SGD(mlp.parameters(), lr=0.01)
 
-    num_epochs = 500
+    # num_epochs = 500
     num_train_samples = train_X.size()[0]
     batch_size = num_train_samples
-    prev_time = time.time()
+    tot_time = 0
     for epoch in range(num_epochs):
-        if epoch > 0:
-            print_rank_0(f' Elapsed time: {time.time()-prev_time}')
-            prev_time = time.time()
-        # start_time = time.time()
+        start_time = time.time()
         train_loss = 0
         for sample_idx in range(0, num_train_samples, batch_size):
             mini_batch = train_X[sample_idx:sample_idx+batch_size, ...]
@@ -57,9 +53,11 @@ def train(hidden_sizes):
             loss.backward()
             optimizer.step()
         train_loss /= (num_train_samples / batch_size)
-        # end_time = time.time()
         # if epoch % 50 == 0:
-        print_rank_0(f'Epoch Number {epoch}: train loss: {train_loss}')
+        print_rank_0(f'Epoch Number {epoch}: train loss: {train_loss}, time: {time.time()-start_time}')
+        tot_time += time.time()-start_time
+    print_rank_0(f'!!! AVG EPOCH TIME: {tot_time/num_epochs}')
+
 
 
 
@@ -77,4 +75,13 @@ def train(hidden_sizes):
 
 
 if __name__ == '__main__':
-    train([20480,20480,20480])
+    # Parse command line arguments
+    parse_args()
+
+    args = get_args()
+    hidden_sizes = args.hidden_sizes
+    num_epochs = args.num_epochs
+
+    print(hidden_sizes, num_epochs)
+
+    train(hidden_sizes, num_epochs=num_epochs)

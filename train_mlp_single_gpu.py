@@ -6,9 +6,9 @@ from arguments import parse_args, get_args
 from model.mlp_single_gpu import MLPSingleGpu
 
 
-def train(hidden_sizes, device):
+def train(hidden_sizes, device, num_epochs=50):
     # Parse command line arguments
-    parse_args()
+    # parse_args()
     # Set CUDA device
     torch.cuda.set_device(device)
 
@@ -29,15 +29,12 @@ def train(hidden_sizes, device):
     criterion = torch.nn.CrossEntropyLoss()
     optimizer = torch.optim.SGD(mlp.parameters(), lr=0.01)
 
-    num_epochs = 500
+    # num_epochs = 500
     num_train_samples = train_X.size()[0]
     batch_size = num_train_samples
-    prev_time = time.time()
+    tot_time = 0
     for epoch in range(num_epochs):
-        if epoch > 0:
-            print(f' Elapsed time: {time.time()-prev_time}')
-            prev_time = time.time()
-        # start_time = time.time()
+        start_time = time.time()
         train_loss = 0
         for sample_idx in range(0, num_train_samples, batch_size):
             mini_batch = train_X[sample_idx:sample_idx+batch_size, ...]
@@ -52,11 +49,22 @@ def train(hidden_sizes, device):
             loss.backward()
             optimizer.step()
         train_loss /= (num_train_samples / batch_size)
-        # end_time = time.time()
-        # print('b')
         # if epoch % 50 == 0:
-        print(f'Epoch Number {epoch}: train loss: {train_loss}')
+        print(f'Epoch Number {epoch}: train loss: {train_loss}, time: {time.time()-start_time}')
+        tot_time += time.time()-start_time
+    print(f'!!! AVG EPOCH TIME: {tot_time/num_epochs}')
 
 
 if __name__ == '__main__':
-    train([20480,20480,20480], device=1)
+    import argparse 
+    parser = argparse.ArgumentParser(description='training arguments')
+
+    parser.add_argument('--num-epochs', type=int, default=20)
+    parser.add_argument('--hidden-sizes', nargs='+', required=True, type=int)
+    parser.add_argument('--device', type=int, default=0)
+
+    args = parser.parse_args()
+
+    print(args.hidden_sizes, args.num_epochs, args.device)
+
+    train(args.hidden_sizes, device=args.device, num_epochs=args.num_epochs)
