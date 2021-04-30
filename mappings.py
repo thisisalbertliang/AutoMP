@@ -65,3 +65,24 @@ class GatherFromModelParallelRegion(torch.autograd.Function):
         # Note: torch.split does not create contiguous tensors by default.
         grad_partition = grad_partition_list[rank].contiguous()
         return grad_partition
+
+class ReduceFromModelParallelRegion(torch.autograd.Function):
+    """All-redcue the input from the model parallel region."""
+
+    @staticmethod
+    def forward(ctx, input_):
+        """All-reduce the input tensor across model parallel group."""
+        # Bypass the function if we are using only 1 GPU
+        if torch.distributed.get_world_size() == 1:
+            return input_
+        
+        # All-reduce
+        torch.distributed.all_reduce(input_)
+
+        return input_
+    
+    @staticmethod
+    def backward(ctx, grad_output):
+        # identity function
+        return grad_output
+

@@ -14,7 +14,7 @@ def parse_args():
 
     parser.add_argument('--num-epochs', type=int, default=20)
 
-    parser.add_argument('--hidden-sizes', nargs='+', required=True, type=int)
+    # parser.add_argument('--hidden-sizes', nargs='+', required=True, type=int)
 
     # Parse
     global GLOBAL_ARGS
