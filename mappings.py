@@ -86,3 +86,57 @@ class ReduceFromModelParallelRegion(torch.autograd.Function):
         # identity function
         return grad_output
 
+def _split(input_):
+    """Split the tensor along its last dimension and keep the
+    corresponding slice."""
+
+    world_size = torch.distributed.get_world_size()
+    # Bypass the function if we are using only 1 GPU.
+    if world_size==1:
+        return input_
+
+    # Split along last dimension.
+    input_list = split_tensor_along_last_dim(input_, world_size)
+
+    # Note: torch.split does not create contiguous tensors by default.
+    rank = torch.distributed.get_rank()
+    output = input_list[rank].contiguous()
+
+    return output
+
+
+def _gather(input_):
+    """Gather tensors and concatinate along the last dimension."""
+
+    world_size = torch.distributed.get_world_size()
+    # Bypass the function if we are using only 1 GPU.
+    if world_size==1:
+        return input_
+
+    # Size and dimension.
+    last_dim = input_.dim() - 1
+    rank = torch.distributed.get_rank()
+
+    tensor_list = [torch.empty_like(input_) for _ in range(world_size)]
+    tensor_list[rank] = input_
+    torch.distributed.all_gather(tensor_list, input_)
+
+    # Note: torch.cat already creates a contiguous tensor.
+    output = torch.cat(tensor_list, dim=last_dim).contiguous()
+
+    return output
+
+class ScatterToModelParallelRegion(torch.autograd.Function):
+    """Split the input and keep only the corresponding chuck to the rank."""
+
+    @staticmethod
+    def symbolic(graph, input_):
+        return _split(input_)
+
+    @staticmethod
+    def forward(ctx, input_):
+        return _split(input_)
+
+    @staticmethod
+    def backward(ctx, grad_output):
+        return _gather(grad_output)
