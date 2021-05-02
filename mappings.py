@@ -130,10 +130,6 @@ class ScatterToModelParallelRegion(torch.autograd.Function):
     """Split the input and keep only the corresponding chuck to the rank."""
 
     @staticmethod
-    def symbolic(graph, input_):
-        return _split(input_)
-
-    @staticmethod
     def forward(ctx, input_):
         return _split(input_)
 

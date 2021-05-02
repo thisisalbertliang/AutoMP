@@ -6,12 +6,12 @@ from mappings import CopyToModelParallelRegion, GatherFromModelParallelRegion, R
 from utils import divide
 
 
-class ParallelLinear(torch.nn.Module):
-    def __init__(self, input_size: int, output_size: int, gather: bool = True):
-        super(ParallelLinear, self).__init__()
+class ColumnParallelLinear(torch.nn.Module):
+    def __init__(self, input_size: int, output_size: int, gather_output: bool = True):
+        super(ColumnParallelLinear, self).__init__()
         self.input_size = input_size
         self.output_size = output_size
-        self.gather = gather
+        self.gather_output = gather_output
 
         world_size = torch.distributed.get_world_size()
         assert output_size % world_size == 0, \
@@ -37,21 +37,23 @@ class ParallelLinear(torch.nn.Module):
             self.bias.zero_()
 
     def forward(self, input_):
+
+        print(f'ALBERT_DEBUG: input_.size() = {input_.size()}')
+        print(f'ALBERT_DEBUG: self.weight.size() = {self.weight.size()}')
+
         # Set up backprop all-reduce
-        # print('HERE00', input_.shape)
         input_parallel = CopyToModelParallelRegion.apply(input_)
-        # print('HERE11', input_parallel.shape)
 
         # Matrix multiply
+        print(f'ALBERT_DEBUG: input_parallel.size() = {input_parallel.size()}')
+        print(f'ALBERT_DEBUG: self.weight.size() = {self.weight.size()}')
         output_parallel = F.linear(input_parallel, self.weight, self.bias)
         output_parallel = F.relu(output_parallel)
 
-        if not self.gather:
+        if not self.gather_output:
             return output_parallel
-
-        # print('HERE0', output_parallel.shape)
+        
         output_gathered = GatherFromModelParallelRegion.apply(output_parallel)
-        # print('HERE1', output_gathered.shape)
 
         return output_gathered
 
@@ -60,13 +62,13 @@ class RowParallelLinear(torch.nn.Module):
     """Linear layer with row parallelism.
     The linear layer is defined as Y = XA + b. A is parallelized along
     its first dimension and X along its second dimension as:
-               -   -
-              | A_1 |
-              | .   |
-          A = | .   |        X = [X_1, ..., X_p]
-              | .   |
-              | A_p |
-               -   -
+                                         -   -
+                                        | A_1 |
+                                        | .   |
+        X = [X_1, ..., X_p]         A = | .   |
+                                        | .   |
+                                        | A_p |
+                                         -   -
     Arguments:
         input_size: first dimension of matrix A.
         output_size: second dimension of matrix A.
@@ -85,9 +87,10 @@ class RowParallelLinear(torch.nn.Module):
                        adding bias but instead return it.
     """
 
-    def __init__(self, input_size, output_size,
-                 input_is_parallel=False, stride=1,
-                 skip_bias_add=False):
+    def __init__(self, 
+                 input_size, 
+                 output_size,
+                 input_is_parallel=False):
         super(RowParallelLinear, self).__init__()
 
         # Keep input parameters
@@ -97,22 +100,15 @@ class RowParallelLinear(torch.nn.Module):
         # Divide the weight matrix along the last dimension.
         world_size = torch.distributed.get_world_size()
         self.input_size_per_partition = divide(input_size, world_size)
-        self.skip_bias_add = skip_bias_add
 
         # Parameters.
         # Note: torch.nn.functional.linear performs XA^T + b and as a result
         # we allocate the transpose.
         # Initialize weight.
-
         self.weight = Parameter(torch.empty(
             self.output_size, self.input_size_per_partition,
             device=torch.cuda.current_device(), dtype=torch.float))
-
-        self.weight.model_parallel = True
-        self.weight.partition_dim = 1
-        self.weight.partition_stride = stride
         torch.nn.init.xavier_normal_(self.weight)
-        
 
         self.bias = Parameter(torch.empty(
             self.output_size, device=torch.cuda.current_device(),
@@ -131,11 +127,8 @@ class RowParallelLinear(torch.nn.Module):
         # Matrix multiply.
         output_parallel = F.linear(input_parallel, self.weight)
         # All-reduce across all the partitions.
-        output_ = ReduceFromModelParallelRegion.apply(output_parallel)
-        if not self.skip_bias_add:
-            output = output_ + self.bias if self.bias is not None else output_
-            output_bias = None
-        else:
-            output = output_
-            output_bias = self.bias
-        return output, output_bias
+        output = ReduceFromModelParallelRegion.apply(output_parallel)
+
+        output = output + self.bias
+
+        return output

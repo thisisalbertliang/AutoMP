@@ -1,3 +1,4 @@
+import torch
 from arguments import get_args
 
 def divide(numerator, denominator):
@@ -21,3 +22,32 @@ def print_rank_0(msg: str):
     args = get_args()
     if args.local_rank == 0:
         print(msg)
+
+def get_ltor_masks_and_position_ids(data, eod_token):
+    """Build masks and position id for left to right model."""
+    args = get_args()
+
+    # Extract batch size and sequence length.
+    batch_size, seq_length = data.size()
+
+    # Attention mask (lower triangular).
+    att_mask_batch = 1
+    attention_mask = torch.tril(torch.ones(
+        (att_mask_batch, seq_length, seq_length), device=data.device)).view(
+            att_mask_batch, 1, seq_length, seq_length)
+    # attention_mask = torch.zeros(
+    #     (seq_length, divide(args.num_attention_heads, 2), batch_size, batch_size), device=data.device
+    # )
+
+    # Loss mask.
+    loss_mask = torch.ones(data.size(), dtype=torch.float, device=data.device)
+
+    # Position ids.
+    position_ids = torch.arange(seq_length, dtype=torch.long,
+                                device=data.device)
+    position_ids = position_ids.unsqueeze(0).expand_as(data)
+
+    # Convert attention mask to binary:
+    attention_mask = (attention_mask < 0.5)
+
+    return attention_mask, loss_mask, position_ids

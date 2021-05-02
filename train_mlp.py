@@ -4,7 +4,7 @@ import numpy as np
 import time
 from initialize import init_distributed
 from arguments import parse_args, get_args
-from model.linear import ParallelLinear
+from model.linear import ColumnParallelLinear
 from utils import print_rank_0
 from model.cross_entropy import parallel_cross_entropy
 from model.mlp import ParallelMLP

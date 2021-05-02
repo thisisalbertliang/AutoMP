@@ -13,8 +13,11 @@ def parse_args():
     # Add future AutoMP arguments here...
 
     parser.add_argument('--num-epochs', type=int, default=20)
-
-    # parser.add_argument('--hidden-sizes', nargs='+', required=True, type=int)
+    parser.add_argument('--batch-size', type=int, default=8)
+    parser.add_argument('--hidden-size', type=int, default=512)
+    parser.add_argument('--num-attention-heads', type=int, default=2)
+    parser.add_argument('--layernorm-epsilon', type=float, default=1e-5, help='Layer norm epsilon.')
+    parser.add_argument('--num-layers', type=int, default=2, help='Number of transformer layers')
 
     # Parse
     global GLOBAL_ARGS

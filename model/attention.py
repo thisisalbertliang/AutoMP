@@ -1,8 +1,8 @@
 import torch
 import math
 from utils import divide
-from model.linear import ParallelLinear, RowParallelLinear
-from model.fused_softmax import FusedScaleMaskSoftmax
+from model.linear import ColumnParallelLinear, RowParallelLinear
+from model.fused_softmax import ScaleMaskSoftmax
 from mappings import split_tensor_along_last_dim
 
 class ParallelSelfAttention(torch.nn.Module):
@@ -11,20 +11,13 @@ class ParallelSelfAttention(torch.nn.Module):
     and returns output of the same size.
     """
 
-    # def __init__(self, attention_mask_func, init_method,
-    #              output_layer_init_method, layer_number, 
-    #              hidden_size, num_attention_heads, attention_dropout):
-    def __init__(self, layer_number, hidden_size, num_attention_heads, attention_dropout, attention_mask_func=None):
+    def __init__(self, attention_mask_func,
+                 hidden_size, 
+                 num_attention_heads, 
+                 attention_dropout):
         super(ParallelSelfAttention, self).__init__()
-        # args = get_args()
-        # self.fp16 = args.fp16
 
         self.attention_mask_func = attention_mask_func
-        self.apply_query_key_layer_scaling = True #args.apply_query_key_layer_scaling
-        # self.attention_softmax_in_fp32 = args.attention_softmax_in_fp32
-        if self.apply_query_key_layer_scaling:
-            self.attention_softmax_in_fp32 = True
-        self.layer_number = max(1, layer_number)
 
         # Per attention head and per partition values.
         world_size = torch.distributed.get_world_size()
@@ -33,26 +26,18 @@ class ParallelSelfAttention(torch.nn.Module):
         self.num_attention_heads_per_partition = divide(num_attention_heads, world_size)
 
         # Strided linear layer.
-        self.query_key_value = ParallelLinear( # column linear
+        self.query_key_value = ColumnParallelLinear( # column linear
             hidden_size,
             3 * hidden_size,
-            gather=False)
-            # gather_output=False,
-            # init_method=init_method)
+            gather_output=False
+        )
 
-        coeff = None
         self.norm_factor = math.sqrt(self.hidden_size_per_attention_head)
-        if self.apply_query_key_layer_scaling:
-            coeff = self.layer_number
-            self.norm_factor *= coeff
 
-        self.scale_mask_softmax = FusedScaleMaskSoftmax(
-            False, # self.fp16,
-            False, # args.scaled_upper_triang_masked_softmax_fusion,
-            False, # args.scaled_masked_softmax_fusion,
-            self.attention_mask_func,
-            True, #self.attention_softmax_in_fp32,
-            coeff)
+        self.scale_mask_softmax = ScaleMaskSoftmax(
+            mask_func=self.attention_mask_func, 
+            scale=None
+        )
 
         # Dropout. Note that for a single iteration, this layer will generate
         # different outputs on different number of parallel partitions but
@@ -61,44 +46,12 @@ class ParallelSelfAttention(torch.nn.Module):
 
         # Output.
         self.dense = RowParallelLinear(
-            hidden_size,
-            hidden_size,
-            input_is_parallel=True,
-            # init_method=output_layer_init_method,
-            skip_bias_add=True)
+            input_size=hidden_size, 
+            output_size=hidden_size, 
+            input_is_parallel=True
+        )
 
-    # def _transpose_last_dim(self, mixed_layer, num_splits, num_splits_first):
-    #     input_shape = mixed_layer.size();
-    #     if num_splits_first:
-    #         """[s, b, num_splits * np * hn] 
-    #         -->(view) [s, b, num_splits, np, hn] 
-    #         -->(tranpose) [s, b, np, num_splits, hn] 
-    #         -->(view) [s, b, np * num_splits * hn] """
-
-    #         intermediate_shape = input_shape[:-1] +\
-    #             (num_splits, self.num_attention_heads_per_partition,
-    #              self.hidden_size_per_attention_head)
-
-    #         mixed_layer = mixed_layer.view(*intermediate_shape)
-    #         mixed_layer = mixed_layer.transpose(-2, -3).contiguous()
-    #     else:
-    #         """[s, b, np * hn * num_splits] 
-    #         -->(view) [s, b, np, hn, num_splits] 
-    #         -->(tranpose) [s, b, np, num_splits, hn] 
-    #         -->(view) [s, b, np * num_splits * hn] """
-
-    #         intermediate_shape = input_shape[:-1] +\
-    #             (self.num_attention_heads_per_partition,
-    #              self.hidden_size_per_attention_head, num_splits)
-
-    #         mixed_layer = mixed_layer.view(*intermediate_shape)
-    #         mixed_layer = mixed_layer.transpose(-1, -2).contiguous()
-    #     mixed_layer = mixed_layer.view(*input_shape)
-        
-    #     return mixed_layer
-
-    def forward(self, hidden_states, attention_mask, layer_past=None,
-                get_key_value=False):
+    def forward(self, hidden_states, attention_mask):
         # hidden_states: [sq, b, h]
 
         # =====================
@@ -106,17 +59,7 @@ class ParallelSelfAttention(torch.nn.Module):
         # =====================
 
         # Attention heads [sq, b, h] --> [sq, b, (np * 3 * hn)]
-        # mixed_x_layer, _ = self.query_key_value(hidden_states)
         mixed_x_layer = self.query_key_value(hidden_states)
-
-        # checkpoint_version = get_checkpoint_version()
-        # if checkpoint_version is not None:
-        #    if checkpoint_version == 0:
-        #        # [s, b, (3 * np * hn)] --> [s, b, (np * 3 * hn)]
-        #        mixed_x_layer = self._transpose_last_dim(mixed_x_layer, 3, True)
-        #    elif checkpoint_version == 1.0:
-        #        # [s, b, (np * hn * 3)] --> [s, b, (np * 3 * hn)]
-        #        mixed_x_layer = self._transpose_last_dim(mixed_x_layer, 3, False)
 
         # [sq, b, (np * 3 * hn)] --> [sq, b, np, 3 * hn]
         new_tensor_shape = mixed_x_layer.size()[:-1] + \
@@ -128,19 +71,6 @@ class ParallelSelfAttention(torch.nn.Module):
         (query_layer,
          key_layer,
          value_layer) = split_tensor_along_last_dim(mixed_x_layer, 3)
-
-        # ==================================
-        # Adjust key and value for inference
-        # ==================================
-
-        if layer_past is not None:
-            past_key, past_value = layer_past
-            key_layer = torch.cat((past_key.type_as(key_layer),
-                                   key_layer), dim=0)
-            value_layer = torch.cat((past_value.type_as(value_layer),
-                                     value_layer), dim=0)
-        if get_key_value:
-            present = (key_layer, value_layer)
 
 
         # ===================================
@@ -177,24 +107,6 @@ class ParallelSelfAttention(torch.nn.Module):
         attention_scores = matmul_result.view(*output_size)
 
 
-        # ==================================================
-        # Update attention mask for inference. [b, np, sq, sk]
-        # ==================================================
-
-        if get_key_value:
-            with torch.no_grad():
-                if layer_past is not None:
-                    attention_mask = attention_mask[
-                        ...,
-                        attention_scores.size(3) - 1,
-                        :attention_scores.size(3)].unsqueeze(2)
-                else:
-                    attention_mask = attention_mask[
-                        ...,
-                        :attention_scores.size(3),
-                        :attention_scores.size(3)]
-
-
         # ===========================
         # Attention probs and dropout
         # ===========================
@@ -205,8 +117,6 @@ class ParallelSelfAttention(torch.nn.Module):
 
         # This is actually dropping out entire tokens to attend to, which might
         # seem a bit unusual, but is taken from the original Transformer paper.
-
-        # with mpu.get_cuda_rng_tracker().fork():
         attention_probs = self.attention_dropout(attention_probs)
 
 
@@ -250,9 +160,6 @@ class ParallelSelfAttention(torch.nn.Module):
         # Output. [sq, b, h]
         # =================
 
-        output, bias = self.dense(context_layer)
+        output = self.dense(context_layer)
 
-        if get_key_value:
-            output = [output, present]
-
-        return output, bias
+        return output
