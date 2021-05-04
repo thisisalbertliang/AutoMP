@@ -30,6 +30,7 @@ class GPT2(torch.nn.Module):
                                         position_ids,
                                         attention_mask)
 
+
         # Output.
         output = parallel_lm_logits(
             lm_output,

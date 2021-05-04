@@ -6,6 +6,8 @@ from initialize import init_distributed
 from arguments import parse_args, get_args
 from utils import print_rank_0, get_ltor_masks_and_position_ids
 from model.gpt2 import GPT2
+from profiler import Profiler
+import os
 
 
 def train():
@@ -15,14 +17,15 @@ def train():
 
     print_rank_0('AutoMP: training GPT2...')
 
-    batch_size = 8
-    sequence_length = 256#1024
-    hidden_size = 512#2048
-    vocab_size = 1024#4096
-    attention_dropout = hidden_dropout = 0.1
-    num_layers = 2
-    layernorm_epsilon = 1e-5
-    num_attention_heads = 2
+    batch_size = args.batch_size 
+    sequence_length = args.sequence_length
+    hidden_size = args.hidden_size
+    vocab_size = args.vocab_size
+    hidden_dropout = args.hidden_dropout
+    attention_dropout = args.attention_dropout
+    num_layers = args.num_layers
+    layernorm_epsilon = args.layernorm_epsilon
+    num_attention_heads = args.num_attention_heads
 
     input_indices = torch.randint(low=0, high=vocab_size, size=(batch_size, sequence_length))
     input_indices = input_indices.to(torch.cuda.current_device())
@@ -45,30 +48,35 @@ def train():
     )
 
     attention_mask, loss_mask, position_ids = get_ltor_masks_and_position_ids(input_indices, vocab_size - 1)
-    
-    # loss = gpt2.forward(input_indices, position_indices, attention_mask, labels)
-    # print_rank_0(f'loss: {loss}')
-
 
     optimizer = torch.optim.SGD(gpt2.parameters(), lr=0.01)
 
+    profiler = Profiler(os.path.join('benchmark', args.exp_name))
+
     num_epochs = 10
-    # num_train_samples = train_X.size()[0]
-    # batch_size = num_train_samples
     tot_time = 0
     for epoch in range(num_epochs):
-        start_time = time.time()
+        overall_name = f'gpt2_hs-{hidden_size}_nah-{num_attention_heads}_bsz-{batch_size}'
+        profiler.start(overall_name)
+        
+        fname = f'gpt2_forward_hs-{hidden_size}_nl-{num_layers}_nah-{num_attention_heads}_bsz-{batch_size}'
         # Forward pass
+        profiler.start(fname)
         loss = gpt2.forward(input_indices, position_indices, attention_mask, labels)
         train_loss = torch.mean(loss)
+        # print(train_loss)
+        torch.cuda.synchronize()
+        profiler.stop(fname)
         # Backward pass
+        bname = f'gpt2_backward_hs-{hidden_size}_nl-{num_layers}_nah-{num_attention_heads}_bsz-{batch_size}'
+        profiler.start(bname)
         optimizer.zero_grad()
         train_loss.backward()
         optimizer.step()
-        # if epoch % 50 == 0:
-        print_rank_0(f'Epoch Number {epoch}: train loss: {train_loss}, time: {time.time()-start_time}')
-        tot_time += time.time()-start_time
-    print_rank_0(f'!!! AVG EPOCH TIME: {tot_time/num_epochs}')
+        torch.cuda.synchronize()
+        profiler.stop(bname)
+
+        profiler.stop(overall_name)
     
 
 if __name__ == '__main__':

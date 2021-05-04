@@ -4,6 +4,8 @@ from initialize import init_distributed
 from arguments import parse_args, get_args
 from utils import print_rank_0
 from model.embedding import Embedding
+from profiler import Profiler
+import os
 
 
 def train():
@@ -13,11 +15,11 @@ def train():
 
     print_rank_0('AutoMP: training GPT2...')
     # Use fake train data
-    batch_size = 8
-    sequence_length = 1024
-    hidden_size = 2048
-    vocab_size = 4096
-    dropout_prob = 0.1
+    batch_size = args.batch_size 
+    sequence_length = args.sequence_length
+    hidden_size = args.hidden_size
+    vocab_size = args.vocab_size
+    dropout_prob = args.hidden_dropout
 
     input_indices = torch.randint(low=0, high=vocab_size, size=(batch_size, sequence_length))
     input_indices = input_indices.to(torch.cuda.current_device())
@@ -28,27 +30,44 @@ def train():
 
     def init_method_normal(tensor):
         return torch.nn.init.normal_(tensor, mean=0.0, std=1.0)
+    
     embedding = Embedding(hidden_size=hidden_size, 
-              vocab_size=vocab_size, 
-              max_sequence_length=sequence_length, 
-              embedding_dropout_prob=dropout_prob, 
-              init_method=init_method_normal)
+                          vocab_size=vocab_size, 
+                          max_sequence_length=sequence_length, 
+                          embedding_dropout_prob=dropout_prob, 
+                          init_method=init_method_normal)
 
-    embedding_output = embedding.forward(input_indices, position_indices)
-    print_rank_0(f'AutoMP: embedding_output = {embedding_output}')
+    optimizer = torch.optim.SGD(embedding.parameters(), lr=0.01)
 
+    profiler = Profiler(os.path.join('benchmark', args.exp_name))
+    
 
-    import time
-    if torch.distributed.get_rank() == 0:
-        print(f'rank {torch.distributed.get_rank()}: working...')
-        objects = [15251, 15210, 'shit']
-        time.sleep(5)
-    else:
-        objects = [15441, 'chick', 'andy']
-    print(f'rank {torch.distributed.get_rank()}: waiting...')
-    torch.distributed.broadcast_object_list(objects, src=0)
-    print(f'rank {torch.distributed.get_rank()}: broadcast_object_list successful!')
-    print(f'rank {torch.distributed.get_rank()}: {objects}')
+    num_epochs = 10
+    tot_time = 0
+    for epoch in range(num_epochs):
+        overall_name = f'emb_hs-{hidden_size}'
+        profiler.start(overall_name)
+        
+        # Forward pass
+        profiler.start(f'emb_forward_hs-{hidden_size}')
+        embedding_output = embedding.forward(input_indices, position_indices)
+        train_loss = torch.mean(embedding_output)
+        torch.cuda.synchronize()
+        profiler.stop(f'emb_forward_hs-{hidden_size}')
+
+        # Backward pass
+        profiler.start(f'emb_backward_hs-{hidden_size}')
+        optimizer.zero_grad()
+        train_loss.backward()
+        optimizer.step()
+        torch.cuda.synchronize()
+        profiler.stop(f'emb_backward_hs-{hidden_size}')
+
+        profiler.stop(overall_name)
+        # if epoch % 50 == 0:
+        # print_rank_0(f'Epoch Number {epoch}: train loss: {train_loss}, time: {time.time() - start_time}')
+        # tot_time += time.time() - start_time
+    # print_rank_0(f'!!! AVG EPOCH TIME: {tot_time / num_epochs}')
 
 if __name__ == '__main__':
     # Parse command line arguments

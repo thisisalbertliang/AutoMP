@@ -3,6 +3,7 @@ import torch
 from model.embedding import Embedding
 from model.transformer import ParallelTransformer
 from mappings import CopyToModelParallelRegion, GatherFromModelParallelRegion
+# from profiler import Profiler, get_profiler
 
 def parallel_lm_logits(input_, word_embeddings_weight, parallel_output,
                        bias=None):
@@ -75,15 +76,21 @@ class TransformerLanguageModel(torch.nn.Module):
             hidden_dropout)
         self._transformer_key = 'transformer'
 
+        # self.profiler = get_profiler()
+
 
     def forward(self, input_ids, position_ids, attention_mask):
 
         # Embeddings.
+        # self.profiler.start(f'embedding-forward-hidden-size-{self.hidden_size}')
         embedding_output = self.embedding(input_ids, position_ids)
+        # self.profiler.stop(f'embedding-forward-hidden-size-{self.hidden_size}')
 
         # Transformer.
+        # self.profiler.start(f'embedding-forward-hidden-size-{self.hidden_size}')
         transformer_output = self.transformer(embedding_output,
                                               attention_mask)
+        # self.profiler.stop(f'embedding-forward-')
 
         return transformer_output
 
