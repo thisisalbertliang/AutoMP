@@ -46,6 +46,7 @@ def train():
         num_attention_heads, attention_dropout,
         init_method_normal,
     )
+    num_params = sum(p.numel() for p in gpt2.parameters() if p.requires_grad)
 
     attention_mask, loss_mask, position_ids = get_ltor_masks_and_position_ids(input_indices, vocab_size - 1)
 
@@ -56,10 +57,10 @@ def train():
     num_epochs = 10
     tot_time = 0
     for epoch in range(num_epochs):
-        overall_name = f'gpt2_hs-{hidden_size}_nah-{num_attention_heads}_bsz-{batch_size}'
+        overall_name = f'gpt2_hs-{hidden_size}_nah-{num_attention_heads}_bsz-{batch_size}_num-params-{num_params}'
         profiler.start(overall_name)
         
-        fname = f'gpt2_forward_hs-{hidden_size}_nl-{num_layers}_nah-{num_attention_heads}_bsz-{batch_size}'
+        fname = f'gpt2_forward_hs-{hidden_size}_nl-{num_layers}_nah-{num_attention_heads}_bsz-{batch_size}_num-params-{num_params}'
         # Forward pass
         profiler.start(fname)
         loss = gpt2.forward(input_indices, position_indices, attention_mask, labels)
@@ -68,7 +69,7 @@ def train():
         torch.cuda.synchronize()
         profiler.stop(fname)
         # Backward pass
-        bname = f'gpt2_backward_hs-{hidden_size}_nl-{num_layers}_nah-{num_attention_heads}_bsz-{batch_size}'
+        bname = f'gpt2_backward_hs-{hidden_size}_nl-{num_layers}_nah-{num_attention_heads}_bsz-{batch_size}_num-params-{num_params}'
         profiler.start(bname)
         optimizer.zero_grad()
         train_loss.backward()
