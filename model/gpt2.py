@@ -39,5 +39,6 @@ class GPT2(torch.nn.Module):
         if labels is None:
             return output
         else:
+            # print(f'Tianyu: output shape: {output.float().shape}, labels shape: {labels.shape}')
             loss = parallel_cross_entropy(output.float(), labels)
             return loss
