@@ -1,5 +1,5 @@
 import torch
-from arguments import get_args
+# from arguments import get_args
 from model.attention import ParallelSelfAttention
 from model.linear import ColumnParallelLinear, RowParallelLinear
 

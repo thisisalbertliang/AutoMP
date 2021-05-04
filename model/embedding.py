@@ -31,7 +31,7 @@ class VocabParallelEmbedding(torch.nn.Module):
 
         # Allocate weights and initialize
 
-        print(f'ALBERT_DEBUG: torch.cuda.current_device() = {torch.cuda.current_device()}')
+        # print(f'ALBERT_DEBUG: torch.cuda.current_device() = {torch.cuda.current_device()}')
 
         self.weight = torch.nn.Parameter(torch.empty(
             self.num_embeddings_per_partition, self.embedding_dim, 
@@ -43,7 +43,7 @@ class VocabParallelEmbedding(torch.nn.Module):
         # input shape: (batch_size, sequence_length)
         # input elements are vocab indices
 
-        print(f'ALBERT_DEBUG: input_.device = {input_.device}')
+        # print(f'ALBERT_DEBUG: input_.device = {input_.device}')
 
         if self.model_parallel_size > 1:
             # Build the mask
@@ -54,8 +54,8 @@ class VocabParallelEmbedding(torch.nn.Module):
         else:
             masked_input = input_
         
-        print(f'ALBERT_DEBUG: masked_input.device = {masked_input.device}')
-        print(f'ALBERT_DEBUG: self.weight.device = {self.weight.device}')
+        # print(f'ALBERT_DEBUG: masked_input.device = {masked_input.device}')
+        # print(f'ALBERT_DEBUG: self.weight.device = {self.weight.device}')
 
         # Get the embeddings
         output_parallel = torch.nn.functional.embedding(masked_input, self.weight)
@@ -108,8 +108,8 @@ class Embedding(torch.nn.Module):
     
     def forward(self, input_indices, position_indices):
 
-        print(f'ALBERT_DEBUG: input_indices.device = {input_indices.device}')
-        print(f'ALBERT_DEBUG: position_indices.device = {position_indices.device}')
+        # print(f'ALBERT_DEBUG: input_indices.device = {input_indices.device}')
+        # print(f'ALBERT_DEBUG: position_indices.device = {position_indices.device}')
 
         # Embeddings
         words_embeddings = self.word_embeddings.forward(input_indices)

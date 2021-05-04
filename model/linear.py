@@ -38,15 +38,15 @@ class ColumnParallelLinear(torch.nn.Module):
 
     def forward(self, input_):
 
-        print(f'ALBERT_DEBUG: input_.size() = {input_.size()}')
-        print(f'ALBERT_DEBUG: self.weight.size() = {self.weight.size()}')
+        # print(f'ALBERT_DEBUG: input_.size() = {input_.size()}')
+        # print(f'ALBERT_DEBUG: self.weight.size() = {self.weight.size()}')
 
         # Set up backprop all-reduce
         input_parallel = CopyToModelParallelRegion.apply(input_)
 
         # Matrix multiply
-        print(f'ALBERT_DEBUG: input_parallel.size() = {input_parallel.size()}')
-        print(f'ALBERT_DEBUG: self.weight.size() = {self.weight.size()}')
+        # print(f'ALBERT_DEBUG: input_parallel.size() = {input_parallel.size()}')
+        # print(f'ALBERT_DEBUG: self.weight.size() = {self.weight.size()}')
         output_parallel = F.linear(input_parallel, self.weight, self.bias)
         output_parallel = F.relu(output_parallel)
 

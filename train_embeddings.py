@@ -38,6 +38,18 @@ def train():
     print_rank_0(f'AutoMP: embedding_output = {embedding_output}')
 
 
+    import time
+    if torch.distributed.get_rank() == 0:
+        print(f'rank {torch.distributed.get_rank()}: working...')
+        objects = [15251, 15210, 'shit']
+        time.sleep(5)
+    else:
+        objects = [15441, 'chick', 'andy']
+    print(f'rank {torch.distributed.get_rank()}: waiting...')
+    torch.distributed.broadcast_object_list(objects, src=0)
+    print(f'rank {torch.distributed.get_rank()}: broadcast_object_list successful!')
+    print(f'rank {torch.distributed.get_rank()}: {objects}')
+
 if __name__ == '__main__':
     # Parse command line arguments
     parse_args()
