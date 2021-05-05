@@ -8,8 +8,9 @@ HIDDEN_SIZE=1024
 # clear log
 rm -rf benchmark
 
-nprocs=(1 2 4 8)
+nprocs=(1 2 4 8 16)
 for nproc in $nprocs
+do
     # emb
     all_vocab_size=(256 512 1024 1536 1920 2304 3072 4096 8192 16384 32768 65536 131072 262144 524288)
     echo "### EMB EXPERIMENTS"
@@ -54,3 +55,5 @@ for nproc in $nprocs
                 --vocab-size=$VOCAB_SIZE
         done
     done
+    
+done
