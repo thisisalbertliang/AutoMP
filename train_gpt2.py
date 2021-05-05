@@ -54,7 +54,7 @@ def train():
 
     profiler = Profiler(os.path.join('benchmark', args.exp_name))
 
-    num_epochs = 10
+    num_epochs = 5
     tot_time = 0
     nproc = torch.distributed.get_world_size()
 

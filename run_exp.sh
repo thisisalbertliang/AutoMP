@@ -1,4 +1,4 @@
-BATCH_SIZE=256
+BATCH_SIZE=8
 VOCAB_SIZE=2048
 # NPROC=2
 NUM_LAYER=3
@@ -9,7 +9,7 @@ HIDDEN_SIZE=1024
 rm -rf benchmark
 
 # nprocs=(1 2 4 8 16)
-for nproc in 1 2 4 8 16 #$nprocs
+for nproc in 1 2 4 8 #$nprocs
 do
     # if [ $nproc -gt 2 ]
     # then
@@ -18,7 +18,7 @@ do
     echo "### EMB EXPERIMENTS"
     for vs in 1024 3072 8192 32768 65536 131072 262144 524288 #$all_vocab_size
     do
-        echo "## running nproc=$nproc, vs=$vs"
+        echo "## emb running nproc=$nproc, vs=$vs"
         if python3 -m torch.distributed.launch --nproc_per_node=$nproc train_embeddings.py \
             --batch-size=$BATCH_SIZE \
             --hidden-size=$HIDDEN_SIZE \
@@ -43,7 +43,7 @@ do
     do
         for hs in 256 512 1024 1536 1920 2304 3072 4096 #$all_hs
         do
-        echo "## running nproc=$nproc, nah=$nah, hs=$hs"
+        echo "## transformer_layer running nproc=$nproc, nah=$nah, hs=$hs"
         if python3 -m torch.distributed.launch --nproc_per_node=$nproc train_transformer_layer.py \
             --batch-size=$BATCH_SIZE \
             --hidden-size=$hs \
@@ -62,7 +62,7 @@ do
     do
         for hs in 256 512 1024 1536 1920 2304 3072 4096 #$all_hs
         do
-            echo "## running nproc=$nproc, nah=$nah, hs=$hs"
+            echo "## gpt2 running nproc=$nproc, nah=$nah, hs=$hs"
             if python3 -m torch.distributed.launch --nproc_per_node=$nproc train_gpt2.py \
                 --batch-size=$BATCH_SIZE \
                 --hidden-size=$hs \
