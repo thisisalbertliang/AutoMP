@@ -64,7 +64,7 @@ def train():
 
     # attention_mask, loss_mask, position_ids = get_ltor_masks_and_position_ids(input_indices, vocab_size - 1)
     attention_mask = (torch.randint(low=0, high=2, 
-                                    size=(sequence_length, num_attention_heads, batch_size, batch_size))
+                                    size=(sequence_length, divide(num_attention_heads, torch.distributed.get_world_size()), batch_size, batch_size))
                       < 0).cuda()
 
     optimizer = torch.optim.SGD(transformer_layer.parameters(), lr=0.01)
