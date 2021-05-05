@@ -64,22 +64,23 @@ def train():
 
     # attention_mask, loss_mask, position_ids = get_ltor_masks_and_position_ids(input_indices, vocab_size - 1)
     attention_mask = (torch.randint(low=0, high=2, 
-                                    size=(sequence_length, num_attention_heads, batch_size, batch_size))
+                                    size=(sequence_length, divide(num_attention_heads, torch.distributed.get_world_size()), batch_size, batch_size))
                       < 0).cuda()
 
     optimizer = torch.optim.SGD(transformer_layer.parameters(), lr=0.01)
 
     profiler = Profiler(os.path.join('benchmark', args.exp_name))
 
-    num_epochs = 10
+    num_epochs = 5
     tot_time = 0
+    nproc = torch.distributed.get_world_size()
     for epoch in range(num_epochs):
         input_ = torch.rand(size=embedding_output.size()).cuda()
 
-        overall_name = f'transformer_layer_hs-{hidden_size}_nah-{num_attention_heads}_bsz-{batch_size}'
+        overall_name = f'transformer_layer_np-{nproc}_hs-{hidden_size}_nah-{num_attention_heads}_bsz-{batch_size}'
         profiler.start(overall_name)
 
-        fname = f'transformer_layer_forward_hs-{hidden_size}_nah-{num_attention_heads}_bsz-{batch_size}'
+        fname = f'transformer_layer_forward_np-{nproc}_hs-{hidden_size}_nah-{num_attention_heads}_bsz-{batch_size}'
         # Forward pass
         profiler.start(fname)
         loss = transformer_layer.forward(input_, attention_mask)
@@ -88,7 +89,7 @@ def train():
         torch.cuda.synchronize()
         profiler.stop(fname)
         # Backward pass
-        bname = f'transformer_layer_backward_hs-{hidden_size}_nah-{num_attention_heads}_bsz-{batch_size}'
+        bname = f'transformer_layer_backward_np-{nproc}_hs-{hidden_size}_nah-{num_attention_heads}_bsz-{batch_size}'
         profiler.start(bname)
         optimizer.zero_grad()
         train_loss.backward()
