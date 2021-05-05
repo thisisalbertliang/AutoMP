@@ -44,24 +44,26 @@ def train():
 
     num_epochs = 10
     tot_time = 0
+    nproc = torch.distributed.get_world_size()
+
     for epoch in range(num_epochs):
-        overall_name = f'emb_hs-{hidden_size}'
+        overall_name = f'emb_np-{nproc}_vs-{vocab_size}'
         profiler.start(overall_name)
         
         # Forward pass
-        profiler.start(f'emb_forward_hs-{hidden_size}')
+        profiler.start(f'emb_forward_np-{nproc}_vs-{vocab_size}')
         embedding_output = embedding.forward(input_indices, position_indices)
         train_loss = torch.mean(embedding_output)
         torch.cuda.synchronize()
-        profiler.stop(f'emb_forward_hs-{hidden_size}')
+        profiler.stop(f'emb_forward_np-{nproc}_vs-{vocab_size}')
 
         # Backward pass
-        profiler.start(f'emb_backward_hs-{hidden_size}')
+        profiler.start(f'emb_backward_np-{nproc}_vs-{vocab_size}')
         optimizer.zero_grad()
         train_loss.backward()
         optimizer.step()
         torch.cuda.synchronize()
-        profiler.stop(f'emb_backward_hs-{hidden_size}')
+        profiler.stop(f'emb_backward_np-{nproc}_vs-{vocab_size}')
 
         profiler.stop(overall_name)
         # if epoch % 50 == 0:
