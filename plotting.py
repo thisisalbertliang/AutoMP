@@ -343,7 +343,6 @@ def area_plot_runtime_vs_num_gpus(ys, xs, model, yname, xname):
             #         df.plot.area(ax=axes[i,j], legend=None, figsize=figsize, xticks=NUM_GPUS, yticks=[], ylabel=ylabel, xlabel=xlabel, ylim=ylim)
             #     else:
             #         df.plot.area(ax=axes[i,j], legend=None, figsize=figsize, xticks=NUM_GPUS, ylabel=ylabel, xlabel=xlabel, ylim=ylim)
-
             if i < len(ys)-1:
                 df.plot.area(ax=axes[i,j], legend=None, figsize=(20,10), xticks=[], ylabel=ylabel, xlabel=xlabel, ylim=ylim)
             else:
@@ -440,4 +439,3 @@ if __name__ == '__main__':
     # area_plot_runtime_vs_num_gpus(NUM_ATTENTION_HEADS, HIDDEN_SIZES, 'transformer layer', 'num attention heads', 'hidden size')
     # area_plot_runtime_vs_num_gpus(NUM_ATTENTION_HEADS, HIDDEN_SIZES, 'gpt2', 'num attention heads', 'hidden size')
     # area_plot_runtime_vs_num_gpus_emb(VOCAB_SIZES, 'embedding', 'vocab size')
-    pass
