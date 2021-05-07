@@ -25,7 +25,6 @@ def print_rank_0(msg: str):
 
 def get_ltor_masks_and_position_ids(data, eod_token):
     """Build masks and position id for left to right model."""
-    args = get_args()
 
     # Extract batch size and sequence length.
     batch_size, seq_length = data.size()

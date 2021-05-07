@@ -6,12 +6,11 @@ from mappings import ReduceFromModelParallelRegion
 class VocabParallelEmbedding(torch.nn.Module):
     """Embedding parallelized in the vocabulary dimension.
 
-    This is mainly adapted from torch.nn.Embedding and all the default
-    values are kept.
-    Arguments:
-        num_embeddings: vocabulary size.
-        embedding_dim: size of hidden state.
-        init_method: method to initialize weights.
+    % \pyinline{num_embeddings} specifies the vocabulary size of the word embedding layer, 
+    \pyinline{embedding_dim} specifies the length of each word vector, 
+    and \pyinline{init_method} specifies a function that will be used to initialize the weights 
+    of the word embedding matrices. 
+    By default, AutoMP uses \pyinline{torch.nn.init.xavier_normal_} to initialize the weights. 
     """
     def __init__(self, num_embeddings, embedding_dim, init_method=torch.nn.init.xavier_normal_):
         super(VocabParallelEmbedding, self).__init__()
@@ -31,7 +30,7 @@ class VocabParallelEmbedding(torch.nn.Module):
 
         # Allocate weights and initialize
 
-        print(f'ALBERT_DEBUG: torch.cuda.current_device() = {torch.cuda.current_device()}')
+        # print(f'ALBERT_DEBUG: torch.cuda.current_device() = {torch.cuda.current_device()}')
 
         self.weight = torch.nn.Parameter(torch.empty(
             self.num_embeddings_per_partition, self.embedding_dim, 
@@ -39,11 +38,21 @@ class VocabParallelEmbedding(torch.nn.Module):
         ))
         init_method(self.weight)
 
+    '''
+    The \pyinline{forward} function of \pyinline{AutoMP.model.VocabParallelEmbedding} takes in only 1 argument: 
+    a tensor with shape \pyinline{(batch_size, sequence_length)}, where each element is the index corresponding 
+    to a particular word and \pyinline{sequence_length} is the length of the sentence. 
+    During this forward pass, each GPU only looks at the words in the input sentence that are part of its own 
+    partition of the vocabulary and uses \pyinline{torch.nn.functional.embedding} to look up the word vector 
+    for the input indices. At the end of forward pass, an \pyinline{torch.distributed.all_reduce} operation 
+    is applied to aggregate to result across the GPUs so that each GPU will have a full copy of the word 
+    embedding of the entire input. 
+    '''
     def forward(self, input_: torch.Tensor):
         # input shape: (batch_size, sequence_length)
         # input elements are vocab indices
 
-        print(f'ALBERT_DEBUG: input_.device = {input_.device}')
+        # print(f'ALBERT_DEBUG: input_.device = {input_.device}')
 
         if self.model_parallel_size > 1:
             # Build the mask
@@ -54,8 +63,8 @@ class VocabParallelEmbedding(torch.nn.Module):
         else:
             masked_input = input_
         
-        print(f'ALBERT_DEBUG: masked_input.device = {masked_input.device}')
-        print(f'ALBERT_DEBUG: self.weight.device = {self.weight.device}')
+        # print(f'ALBERT_DEBUG: masked_input.device = {masked_input.device}')
+        # print(f'ALBERT_DEBUG: self.weight.device = {self.weight.device}')
 
         # Get the embeddings
         output_parallel = torch.nn.functional.embedding(masked_input, self.weight)
@@ -108,8 +117,8 @@ class Embedding(torch.nn.Module):
     
     def forward(self, input_indices, position_indices):
 
-        print(f'ALBERT_DEBUG: input_indices.device = {input_indices.device}')
-        print(f'ALBERT_DEBUG: position_indices.device = {position_indices.device}')
+        # print(f'ALBERT_DEBUG: input_indices.device = {input_indices.device}')
+        # print(f'ALBERT_DEBUG: position_indices.device = {position_indices.device}')
 
         # Embeddings
         words_embeddings = self.word_embeddings.forward(input_indices)

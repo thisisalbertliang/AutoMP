@@ -1,7 +1,7 @@
 import torch
 from utils import vocab_range_from_per_partition_vocab_size
 
-class _VocabParallelCrossEntropy(torch.autograd.Function):
+class ParallelCrossEntropy(torch.autograd.Function):
 
     @staticmethod
     def forward(ctx, vocab_parallel_logits, target):
@@ -81,4 +81,4 @@ class _VocabParallelCrossEntropy(torch.autograd.Function):
 
 def parallel_cross_entropy(vocab_parallel_logits, target):
     """Helper function for the cross entropy."""
-    return _VocabParallelCrossEntropy.apply(vocab_parallel_logits, target)
+    return ParallelCrossEntropy.apply(vocab_parallel_logits, target)

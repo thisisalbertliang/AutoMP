@@ -7,6 +7,13 @@ from utils import divide
 
 
 class ColumnParallelLinear(torch.nn.Module):
+    '''
+    `input_size` is the size of the feature dimension of each input sample. 
+    `output_size` is the size of the feature dimension of each output sample. 
+    `gather` is set to `True`, then `ColumnParallelLinear` will perform an all-gather operation 
+     at the end of its `forward` function to ensure that every GPU has a copy of the full output activation. 
+     If `gather` is set to `False`, then at the end of the `forward` function, every GPU only retains its own partition of the output activation. 
+    '''
     def __init__(self, input_size: int, output_size: int, gather_output: bool = True):
         super(ColumnParallelLinear, self).__init__()
         self.input_size = input_size
@@ -38,15 +45,15 @@ class ColumnParallelLinear(torch.nn.Module):
 
     def forward(self, input_):
 
-        print(f'ALBERT_DEBUG: input_.size() = {input_.size()}')
-        print(f'ALBERT_DEBUG: self.weight.size() = {self.weight.size()}')
+        # print(f'ALBERT_DEBUG: input_.size() = {input_.size()}')
+        # print(f'ALBERT_DEBUG: self.weight.size() = {self.weight.size()}')
 
         # Set up backprop all-reduce
         input_parallel = CopyToModelParallelRegion.apply(input_)
 
         # Matrix multiply
-        print(f'ALBERT_DEBUG: input_parallel.size() = {input_parallel.size()}')
-        print(f'ALBERT_DEBUG: self.weight.size() = {self.weight.size()}')
+        # print(f'ALBERT_DEBUG: input_parallel.size() = {input_parallel.size()}')
+        # print(f'ALBERT_DEBUG: self.weight.size() = {self.weight.size()}')
         output_parallel = F.linear(input_parallel, self.weight, self.bias)
         output_parallel = F.relu(output_parallel)
 
@@ -59,32 +66,10 @@ class ColumnParallelLinear(torch.nn.Module):
 
 
 class RowParallelLinear(torch.nn.Module):
-    """Linear layer with row parallelism.
-    The linear layer is defined as Y = XA + b. A is parallelized along
-    its first dimension and X along its second dimension as:
-                                         -   -
-                                        | A_1 |
-                                        | .   |
-        X = [X_1, ..., X_p]         A = | .   |
-                                        | .   |
-                                        | A_p |
-                                         -   -
-    Arguments:
-        input_size: first dimension of matrix A.
-        output_size: second dimension of matrix A.
-        bias: If true, add bias. Note that bias is not parallelized.
-        input_is_parallel: If true, we assume that the input is already
-                           split across the GPUs and we do not split
-                           again.
-        init_method: method to initialize weights. Note that bias is always set
-                     to zero.
-        stride: For the strided linear layers.
-        keep_master_weight_for_test: This was added for testing and should be
-                                     set to False. It returns the master weights
-                                     used for initialization.
-        skip_bias_add: This was added to enable performance optimations where bias
-                       can be fused with other elementwise operations. we skip 
-                       adding bias but instead return it.
+    """
+    The first two are semantically identical to those of the column parallel version. 
+    The third argument indicates whether the input to this layer during a forward pass is parallelized already. 
+    If not, AutoMP will split the input and keep only the corresponding chuck to the current GPU.
     """
 
     def __init__(self, 

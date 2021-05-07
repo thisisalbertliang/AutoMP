@@ -11,6 +11,12 @@ class ParallelSelfAttention(torch.nn.Module):
     and returns output of the same size.
     """
 
+    '''
+    The arguments are quite self-explanatory, with `attention_mask_func` 
+    being the function that is applied before softmax to the masked entries, 
+    `hidden_size` being the length of the vector of the hidden output, 
+    and `attention_dropout` being the dropout rate on the attention scores.
+    '''
     def __init__(self, attention_mask_func,
                  hidden_size, 
                  num_attention_heads, 
@@ -51,6 +57,11 @@ class ParallelSelfAttention(torch.nn.Module):
             input_is_parallel=True
         )
 
+    '''
+    The forward function of this layer takes in the above two arguments, 
+    with hidden_states usually being the output of the previous layer in the network, 
+    and attention_mask being the attention mask used in the decoder in architectures such as GPT-2
+    '''
     def forward(self, hidden_states, attention_mask):
         # hidden_states: [sq, b, h]
 
